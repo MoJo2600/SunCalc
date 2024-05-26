@@ -51,6 +51,9 @@
         "unused": true
     },
     "dependencies": {
-        "pnpm": "^9.1.1"
+        "d3": "^7.9.0",
+        "linkedom": "^0.18.0",
+        "pnpm": "^9.1.1",
+        "suncalc": "^1.9.0"
     }
 }
