@@ -23,13 +23,34 @@
             </template>
 
             <v-card-text>
-              <v-slider label="Amplitude" :max="180" :min="-180" :step="1" v-model="settings.amplitude"></v-slider>
-              {{ settings.amplitude }}
-              <v-slider label="Period" :max="5" :min="0" :step="0.1" v-model="settings.period"></v-slider>
-              {{ settings.period }}
-              <v-slider label="Offset" :max="100" :min="-100" :step="1" v-model="settings.offset"></v-slider>
-              {{ settings.offset }}
-              {{ loading }}
+              <h2>Light On</h2>
+              <v-slider label="Amplitude" :max="3" :min="-3" :step="0.1" v-model="settings.lightOnAmplitude">
+                <template v-slot:append>
+                  <v-text-field v-model="settings.lightOnAmplitude" density="compact" style="width: 70px" type="number" hide-details
+                    single-line></v-text-field>
+                </template>
+              </v-slider>
+              <v-slider label="Offset" :max="100" :min="-100" :step="1" v-model="settings.lightOnOffset">
+                <template v-slot:append>
+                  <v-text-field v-model="settings.lightOnOffset" density="compact" style="width: 70px" type="number" hide-details
+                    single-line></v-text-field>
+                </template>
+
+              </v-slider>
+              <h2>Light Off</h2>
+              <v-slider label="Amplitude" :max="3" :min="-3" :step="0.1" v-model="settings.lightOffAmplitude">
+                <template v-slot:append>
+                  <v-text-field v-model="settings.lightOffAmplitude" density="compact" style="width: 90px" type="number" hide-details
+                    single-line></v-text-field>
+                </template>
+              </v-slider>
+              <v-slider label="Offset" :max="10" :min="-10" :step="0.1" v-model="settings.lightOffOffset">
+                <template v-slot:append>
+                  <v-text-field v-model="settings.lightOffOffset" density="compact" style="width: 90px" type="number" hide-details
+                    single-line></v-text-field>
+                </template>
+
+              </v-slider>
             </v-card-text>
           </v-card>
         </v-col>
@@ -128,27 +149,30 @@ const tableRows = ref<{
   date: string;
   sunrise: string;
   sunset: string;
+  sunsetStart: string;
   lightOn: string;
-  lightOff: string
+  lightOff: string,
+  altitudeOn: number,
+  altitudeOff: number,
 }[]>([])
 
 const settings = reactive({
-  amplitude: 1.0,
-  period: 1,
-  offset: 0
+  lightOnAmplitude: -0.5,
+  lightOnOffset: 0,
+  lightOffAmplitude: -0.5,
+  lightOffOffset: 1
 })
 
 
 const update = debounce(async () => {
   // console.log('Update chart');
   loading.value = true;
-  // console.dir(source);
   if (chart.value) {
-    const source = await getDataSet();
+    await getDataSet();
     (chart.value as any).setOption(
       updateOptions = {
         dataset: {
-          source
+          source: tableRows.value
         },
       });
   }
@@ -168,46 +192,56 @@ const getOneDayTimeString = (date: Date): string => {
 const getDataSet = async () => {
   let now = startOfSunYear;
   tableRows.value = [];
-  const dataset = [] as any[];
+  // const dataset = [] as any[];
 
-  dataset.push(['date']);
-  dataset.push(['sunrise']);
-  dataset.push(['sunset']);
-  dataset.push(['lightOn']);
-  dataset.push(['lightOff']);
+  // dataset.push(['date']);
+  // dataset.push(['sunrise']);
+  // dataset.push(['sunsetStart']);
+  // dataset.push(['sunset']);
+  // dataset.push(['lightOn']);
+  // dataset.push(['lightOff']);
 
   for (var i = 0; i < 365; i++) {
-    const dayOfYear = dayjs().dayOfYear();
 
-    // const altitude = -0.5 * (settings.amplitude * Math.sin((settings.period * dayOfYear) - (1.377 - Math.PI)) + settings.offset);
-    const altitude = 1 * (settings.amplitude * Math.sin((settings.period * dayOfYear) - (1.377 - Math.PI)) + settings.offset);
-    
-    SunCalc.addTime(altitude, 'lightOn', 'lightOff');
+    // const altitude = 1 * (settings.amplitude * Math.sin((settings.period * i) - (1.377 - Math.PI)) + settings.offset);
+
+
+    // https://math.stackexchange.com/questions/650223/formula-for-sine-wave-that-lines-up-with-calendar-seasons
+    const altitudeOn = settings.lightOnAmplitude * (Math.sin(((2 * Math.PI) / 365) * (now.dayOfYear() - 81.75))) + settings.lightOnOffset;
+    const altitudeOff = settings.lightOffAmplitude * (Math.sin(((2 * Math.PI) / 365) * (now.dayOfYear() - 81.75))) + settings.lightOffOffset;
+
+    SunCalc.addTime(altitudeOn, 'lightOnMorning', 'lightOnEvening');
+    SunCalc.addTime(altitudeOff, 'lightOffMorning', 'lightOffEvening');
 
     var sunPos = SunCalc.getTimes(now.toDate(), lat.value, lng.value, elevation.value);
 
     // add date to header row
     const date = [now.year(), now.month() + 1, now.date()].join('/');
-    dataset[0].push(date);
-    dataset[1].push(getOneDayTimeString(sunPos['sunrise']));
-    dataset[2].push(getOneDayTimeString(sunPos['sunset']));
-    dataset[3].push(getOneDayTimeString(sunPos['lightOn']));
-    dataset[4].push(getOneDayTimeString(sunPos['lightOff']));
+    // dataset[0].push(date);
+    // dataset[1].push(getOneDayTimeString(sunPos['sunrise']));
+    // dataset[2].push(getOneDayTimeString(sunPos['sunset']));
+    // dataset[3].push(getOneDayTimeString(sunPos['lightOnEvening']));
+    // dataset[4].push(getOneDayTimeString(sunPos['lightOffEvening']));
 
     tableRows.value.push(
       {
         date,
         sunrise: getOneDayTimeString(sunPos['sunrise']),
+        sunsetStart: getOneDayTimeString(sunPos['sunsetStart']),
         sunset: getOneDayTimeString(sunPos['sunset']),
-        lightOn: getOneDayTimeString(sunPos['lightOn']),
-        lightOff: getOneDayTimeString(sunPos['lightOff'])
+        lightOn: getOneDayTimeString(sunPos['lightOnEvening']),
+        lightOff: getOneDayTimeString(sunPos['lightOffEvening']),
+        altitudeOn,
+        altitudeOff
       }
     )
 
     now = now.add(1, 'day');
   }
 
-  return dataset;
+  // console.dir(tableRows.value);
+
+  // return dataset;
 }
 
 const setOptions = async (source) => {
@@ -216,12 +250,19 @@ const setOptions = async (source) => {
     legend: {},
     tooltip: {
       trigger: 'axis',
+      // axisPointer: {
+      //   label: {
+      //     formatter: (params) => {
+      //       console.dir(params);
+      //     }
+      //   }
+      // },
       // formatter: function (params) {
 
-      //   let text = '';
-      //   for (const param of params) {
+      //   // let text = '';
+      //   // for (const param of params) {
 
-      //   }
+      //   // }
 
       //   console.dir(params);
       //   params = params[0];
@@ -241,6 +282,7 @@ const setOptions = async (source) => {
       }
     },
     dataset: {
+      dimensions: ['date', 'sunrise', 'sunsetStart', 'sunset', 'lightOn', 'lightOff', 'altitudeOn', 'altitudeOff'],
       source
     },
     xAxis: {
@@ -249,13 +291,21 @@ const setOptions = async (source) => {
         show: false
       }
     },
-    yAxis: {
-      type: 'time',
-      // boundaryGap: ['00:00:00'],
-      splitLine: {
-        show: false
+    yAxis: [
+      {
+        type: 'time',
+        // boundaryGap: ['00:00:00'],
+        splitLine: {
+          show: false
+        },
+      },
+      {
+        type: 'value',
+        name: 'Altitude',
+        // min: 0,
+        // max: 1
       }
-    },
+    ],
     // grid: { top: '55%' },
     series: [
       {
@@ -263,38 +313,83 @@ const setOptions = async (source) => {
         seriesLayoutBy: 'row',
         smooth: true,
         showSymbol: false,
+        tooltip: {
+          valueFormatter: value => {
+            return value['sunrise']
+          }
+        },
         // itemStyle: {normal: {areaStyle: {type: 'default'}}},
-        lineStyle: { color: '#fcc603' }
+        lineStyle: { color: '#fcc603', type: 'dashed', width: 1 }
       },
-      // {
-      //   type: 'line',
-      //   seriesLayoutBy: 'row',
-      //   smooth: true,
-      //   showSymbol: false,
-      //   // itemStyle: {normal: {areaStyle: {type: 'default'}}},
-      //   lineStyle: { color: '#fcc603' }
-      // },
-      // {
-      //   type: 'line',
-      //   seriesLayoutBy: 'row',
-      //   smooth: true,
-      //   showSymbol: false,
-      //   lineStyle: { color: '#fc3903' }
-      // },
-      // {
-      //   type: 'line',
-      //   seriesLayoutBy: 'row',
-      //   smooth: true,
-      //   showSymbol: false,
-      //   lineStyle: { color: '#fc3903' }
-      // },
+      {
+        type: 'line',
+        seriesLayoutBy: 'row',
+        smooth: true,
+        showSymbol: false,
+        tooltip: {
+          valueFormatter: value => {
+            return value['sunsetStart']
+          }
+        },
+        // itemStyle: {normal: {areaStyle: {type: 'default'}}},
+        lineStyle: { color: '#fcc603', type: 'dashed', width: 1 }
+      },
+      {
+        type: 'line',
+        seriesLayoutBy: 'row',
+        smooth: true,
+        showSymbol: false,
+        tooltip: {
+          valueFormatter: value => {
+            return value['sunset']
+          }
+        },
+        // itemStyle: {normal: {areaStyle: {type: 'default'}}},
+        lineStyle: { color: '#fcc603', type: 'dashed', width: 1 }
+      },
+      {
+        type: 'line',
+        seriesLayoutBy: 'row',
+        smooth: true,
+        showSymbol: false,
+        tooltip: {
+          valueFormatter: value => {
+            return value['lightOn']
+          }
+        },
+      },
+      {
+        type: 'line',
+        seriesLayoutBy: 'row',
+        smooth: true,
+        showSymbol: false,
+        tooltip: {
+          valueFormatter: value => {
+            return value['lightOff']
+          }
+        },
+      },
+      {
+        type: 'line',
+        seriesLayoutBy: 'row',
+        yAxisIndex: 1,
+        smooth: true,
+        showSymbol: false,
+      },
+      {
+        type: 'line',
+        seriesLayoutBy: 'row',
+        yAxisIndex: 1,
+        smooth: true,
+        showSymbol: false,
+      },
     ]
   }
 };
 
 onMounted(async () => {
-  const source = await getDataSet();
-  option.value = await setOptions(source);
+  await getDataSet();
+  option.value = await setOptions(tableRows.value);
 })
 
 </script>
