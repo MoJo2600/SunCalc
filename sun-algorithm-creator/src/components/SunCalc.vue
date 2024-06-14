@@ -25,9 +25,9 @@
             <v-card-text>
               <v-slider label="Amplitude" :max="180" :min="-180" :step="1" v-model="settings.amplitude"></v-slider>
               {{ settings.amplitude }}
-              <v-slider label="Period" :max="1" :min="0" :step="0.01" v-model="settings.period"></v-slider>
+              <v-slider label="Period" :max="5" :min="0" :step="0.1" v-model="settings.period"></v-slider>
               {{ settings.period }}
-              <v-slider label="Offset" :max="100" :min="0" :step="1" v-model="settings.offset"></v-slider>
+              <v-slider label="Offset" :max="100" :min="-100" :step="1" v-model="settings.offset"></v-slider>
               {{ settings.offset }}
               {{ loading }}
             </v-card-text>
@@ -49,6 +49,10 @@
             <v-card-text>
               <v-chart ref="chart" class="chart" :loading="loading" :option="option" autoresize style="height: 500px" />
             </v-card-text>
+
+            <v-data-table :items="tableRows">
+
+            </v-data-table>
           </v-card>
         </v-col>
       </v-row>
@@ -98,19 +102,19 @@ use([
 
 provide(THEME_KEY, 'dark');
 
-type EChartsOption = ComposeOption<
-  | TitleComponentOption
-  | TooltipComponentOption
-  | LegendComponentOption
-  | PieSeriesOption
->;
+// type EChartsOption = ComposeOption<
+//   | TitleComponentOption
+//   | TooltipComponentOption
+//   | LegendComponentOption
+//   | PieSeriesOption
+// >;
 
-const amplitude = ref(1.0);
-const period = ref(1.0);
-const offset = ref(10);
+// const amplitude = ref(1.0);
+// const period = ref(1.0);
+// const offset = ref(10);
 
 const startOfSunYear = dayjs().subtract(1, 'year').month(11).date(27);
-const fixedDate = dayjs('2000-1-1 00:00:00')
+// const fixedDate = dayjs('2000-1-1 00:00:00')
 let oneDay = 24 * 3600 * 1000;
 const lat = ref(49.051944);
 const lng = ref(11.782778);
@@ -120,15 +124,23 @@ const loading = ref(false);
 const chart = shallowRef(null);
 let updateOptions = {};
 
+const tableRows = ref<{
+  date: string;
+  sunrise: string;
+  sunset: string;
+  lightOn: string;
+  lightOff: string
+}[]>([])
+
 const settings = reactive({
   amplitude: 1.0,
-  period: 0.01,
-  offset: 10
+  period: 1,
+  offset: 0
 })
 
 
 const update = debounce(async () => {
-  console.log('Update chart');
+  // console.log('Update chart');
   loading.value = true;
   // console.dir(source);
   if (chart.value) {
@@ -155,6 +167,7 @@ const getOneDayTimeString = (date: Date): string => {
 
 const getDataSet = async () => {
   let now = startOfSunYear;
+  tableRows.value = [];
   const dataset = [] as any[];
 
   dataset.push(['date']);
@@ -162,21 +175,35 @@ const getDataSet = async () => {
   dataset.push(['sunset']);
   dataset.push(['lightOn']);
   dataset.push(['lightOff']);
-  console.log(settings.amplitude);
 
   for (var i = 0; i < 365; i++) {
     const dayOfYear = dayjs().dayOfYear();
-    const altitude = -1.0 * (settings.amplitude * Math.sin((settings.period * dayOfYear) - (1.377 - Math.PI)) + settings.offset);
+
+    // const altitude = -0.5 * (settings.amplitude * Math.sin((settings.period * dayOfYear) - (1.377 - Math.PI)) + settings.offset);
+    const altitude = 1 * (settings.amplitude * Math.sin((settings.period * dayOfYear) - (1.377 - Math.PI)) + settings.offset);
+    
     SunCalc.addTime(altitude, 'lightOn', 'lightOff');
 
     var sunPos = SunCalc.getTimes(now.toDate(), lat.value, lng.value, elevation.value);
 
     // add date to header row
-    dataset[0].push([now.year(), now.month() + 1, now.date()].join('/'))
+    const date = [now.year(), now.month() + 1, now.date()].join('/');
+    dataset[0].push(date);
     dataset[1].push(getOneDayTimeString(sunPos['sunrise']));
     dataset[2].push(getOneDayTimeString(sunPos['sunset']));
     dataset[3].push(getOneDayTimeString(sunPos['lightOn']));
     dataset[4].push(getOneDayTimeString(sunPos['lightOff']));
+
+    tableRows.value.push(
+      {
+        date,
+        sunrise: getOneDayTimeString(sunPos['sunrise']),
+        sunset: getOneDayTimeString(sunPos['sunset']),
+        lightOn: getOneDayTimeString(sunPos['lightOn']),
+        lightOff: getOneDayTimeString(sunPos['lightOff'])
+      }
+    )
+
     now = now.add(1, 'day');
   }
 
@@ -189,19 +216,26 @@ const setOptions = async (source) => {
     legend: {},
     tooltip: {
       trigger: 'axis',
-      formatter: function (params) {
-        params = params[0];
-        var date = new Date(params.name);
-        return (
-          date.getDate() +
-          '/' +
-          (date.getMonth() + 1) +
-          '/' +
-          date.getFullYear() +
-          ' : ' +
-          params.value[1]
-        );
-      },
+      // formatter: function (params) {
+
+      //   let text = '';
+      //   for (const param of params) {
+
+      //   }
+
+      //   console.dir(params);
+      //   params = params[0];
+      //   var date = new Date(params.name);
+      //   return (
+      //     date.getDate() +
+      //     '/' +
+      //     (date.getMonth() + 1) +
+      //     '/' +
+      //     date.getFullYear() +
+      //     ' : ' +
+      //     params.value[1] 
+      //   );
+      // },
       axisPointer: {
         animation: false
       }
@@ -232,28 +266,28 @@ const setOptions = async (source) => {
         // itemStyle: {normal: {areaStyle: {type: 'default'}}},
         lineStyle: { color: '#fcc603' }
       },
-      {
-        type: 'line',
-        seriesLayoutBy: 'row',
-        smooth: true,
-        showSymbol: false,
-        // itemStyle: {normal: {areaStyle: {type: 'default'}}},
-        lineStyle: { color: '#fcc603' }
-      },
-      {
-        type: 'line',
-        seriesLayoutBy: 'row',
-        smooth: true,
-        showSymbol: false,
-        lineStyle: { color: '#fc3903' }
-      },
-      {
-        type: 'line',
-        seriesLayoutBy: 'row',
-        smooth: true,
-        showSymbol: false,
-        lineStyle: { color: '#fc3903' }
-      },
+      // {
+      //   type: 'line',
+      //   seriesLayoutBy: 'row',
+      //   smooth: true,
+      //   showSymbol: false,
+      //   // itemStyle: {normal: {areaStyle: {type: 'default'}}},
+      //   lineStyle: { color: '#fcc603' }
+      // },
+      // {
+      //   type: 'line',
+      //   seriesLayoutBy: 'row',
+      //   smooth: true,
+      //   showSymbol: false,
+      //   lineStyle: { color: '#fc3903' }
+      // },
+      // {
+      //   type: 'line',
+      //   seriesLayoutBy: 'row',
+      //   smooth: true,
+      //   showSymbol: false,
+      //   lineStyle: { color: '#fc3903' }
+      // },
     ]
   }
 };
