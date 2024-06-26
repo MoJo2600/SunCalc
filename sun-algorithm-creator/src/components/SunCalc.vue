@@ -4,7 +4,7 @@
 
       <v-row>
         <v-col cols="12">
-          <h1>Sun algorithm calculator</h1>
+          <h1>Sun algorithm for adaptive lighting</h1>
         </v-col>
       </v-row>
 
@@ -13,67 +13,98 @@
         <v-col cols="12">
           <v-card class="py-4" color="surface-variant" rounded="lg" variant="outlined" :loading="loading">
             <template #title>
-              <h2 class="text-h5 font-weight-bold">Parameters</h2>
+              Parameters
             </template>
 
             <template #subtitle>
-              <div class="text-subtitle-1">
-                Use the following parameters to adjust the algorithm.
-              </div>
+              Use the following parameters to adjust the algorithm.
             </template>
-
             <v-card-text>
-              <h2>Light On</h2>
-              <v-slider label="Amplitude" :max="3" :min="-3" :step="0.1" v-model="settings.lightOnAmplitude">
-                <template v-slot:append>
-                  <v-text-field v-model="settings.lightOnAmplitude" density="compact" style="width: 70px" type="number" hide-details
-                    single-line></v-text-field>
-                </template>
-              </v-slider>
-              <v-slider label="Offset" :max="100" :min="-100" :step="1" v-model="settings.lightOnOffset">
-                <template v-slot:append>
-                  <v-text-field v-model="settings.lightOnOffset" density="compact" style="width: 70px" type="number" hide-details
-                    single-line></v-text-field>
-                </template>
-
-              </v-slider>
-              <h2>Light Off</h2>
-              <v-slider label="Amplitude" :max="3" :min="-3" :step="0.1" v-model="settings.lightOffAmplitude">
-                <template v-slot:append>
-                  <v-text-field v-model="settings.lightOffAmplitude" density="compact" style="width: 90px" type="number" hide-details
-                    single-line></v-text-field>
-                </template>
-              </v-slider>
-              <v-slider label="Offset" :max="10" :min="-10" :step="0.1" v-model="settings.lightOffOffset">
-                <template v-slot:append>
-                  <v-text-field v-model="settings.lightOffOffset" density="compact" style="width: 90px" type="number" hide-details
-                    single-line></v-text-field>
-                </template>
-
-              </v-slider>
+              <p>
+                The table below show the sun altitudes which define the specific stages of the twilight period (See <a
+                  href="https://en.wikipedia.org/wiki/Sunset">wikipedia</a>).
+                This algorithm will adjust the time when to run an automation (e.g. switch of a light) based on the day
+                of year. It does this by applying a sinus wave which follows
+                the sun year for which one is able to adjust the amplitude and and offset. The result can be seen in the
+                graph below.
+                With the correct settings one is able to have lights on longer in winter and shorter in summer.
+              </p>
+              <v-spacer class="mb-2"></v-spacer>
+              <v-expansion-panels>
+                <v-expansion-panel>
+                  <v-expansion-panel-title>
+                    Sun altitude table
+                  </v-expansion-panel-title>
+                  <v-expansion-panel-text>
+                    <v-table>
+                      <thead>
+                        <tr>
+                          <th>
+                            Angle
+                          </th>
+                          <th>
+                            Event
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>6°</td>
+                          <td>golden hour</td>
+                        </tr>
+                        <tr>
+                          <td>-0.833°</td>
+                          <td>Sunset</td>
+                        </tr>
+                        <tr>
+                          <td>-6°</td>
+                          <td>dusk</td>
+                        </tr>
+                        <tr>
+                          <td>-12°</td>
+                          <td>nautical dusk</td>
+                        </tr>
+                        <tr>
+                          <td>-18°</td>
+                          <td>night</td>
+                        </tr>
+                      </tbody>
+                    </v-table>
+                  </v-expansion-panel-text>
+                </v-expansion-panel>
+              </v-expansion-panels>
             </v-card-text>
-          </v-card>
-        </v-col>
 
-        <v-col cols="12">
-          <v-card class="py-4" color="surface-variant" rounded="lg" variant="outlined">
-            <template #title>
-              <h2 class="text-h5 font-weight-bold">Graph</h2>
-            </template>
+            <v-divider class="mx-4 mb-1"></v-divider>
 
-            <template #subtitle>
-              <div class="text-subtitle-1">
-                Visual representation
-              </div>
-            </template>
+            <v-card-title>Settings</v-card-title>
 
-            <v-card-text>
-              <v-chart ref="chart" class="chart" :loading="loading" :option="option" autoresize style="height: 500px" />
-            </v-card-text>
+            <div class="px-4 mb-2">
+              <v-text-field label="latitude" v-model="lat"></v-text-field>
+              <v-text-field label="longitude" v-model="lng"></v-text-field>
+              <v-text-field label="height" v-model="elevation"></v-text-field>
+              <v-slider label="Amplitude" :max="20" :min="-20" :step="0.1" v-model="settings.lightOffAmplitude">
+                <template v-slot:append>
+                  <v-text-field v-model="settings.lightOffAmplitude" density="compact" style="width: 70px" type="number"
+                    hide-details single-line></v-text-field>
+                </template>
+              </v-slider>
+              <v-slider label="Offset" :max="30" :min="-30" :step="0.1" v-model="settings.lightOffOffset">
+                <template v-slot:append>
+                  <v-text-field v-model="settings.lightOffOffset" density="compact" style="width: 70px" type="number"
+                    hide-details single-line></v-text-field>
+                </template>
+              </v-slider>
 
-            <v-data-table :items="tableRows">
+              <span>
+                With the current settings, the amplitude will be between <strong>{{ lowerBound }}</strong> degrees
+                in winter and <strong>{{ upperBound }}</strong> degrees in summer.
+              </span>
+            </div>
 
-            </v-data-table>
+            <span class="mx-4 mb-1"></span>
+
+            <v-chart ref="chart" class="chart" :loading="loading" :option="option" autoresize style="height: 500px" />
           </v-card>
         </v-col>
       </v-row>
@@ -82,7 +113,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, provide, reactive, ref, shallowRef, watch, watchEffect } from 'vue';
+///// imports /////
+import { computed, onMounted, provide, reactive, ref, shallowRef, watch, watchEffect } from 'vue';
 import { use } from 'echarts/core';
 import { LineChart, BarChart, PieChart } from 'echarts/charts';
 import {
@@ -94,18 +126,12 @@ import {
 } from 'echarts/components';
 import VChart, { THEME_KEY } from 'vue-echarts';
 import { CanvasRenderer } from 'echarts/renderers';
-import type { ComposeOption } from 'echarts/core';
-import type { PieSeriesOption } from 'echarts/charts';
-import type {
-  TitleComponentOption,
-  TooltipComponentOption,
-  LegendComponentOption,
-} from 'echarts/components';
 import SunCalc from 'suncalc';
 import dayjs from 'dayjs'
 import dayOfYear from 'dayjs/plugin/dayOfYear';
 import localizedFormat from 'dayjs/plugin/localizedFormat';
 import debounce from 'lodash.debounce'
+import { color } from 'echarts';
 dayjs.extend(localizedFormat)
 dayjs.extend(dayOfYear)
 
@@ -123,6 +149,9 @@ use([
 
 provide(THEME_KEY, 'dark');
 
+///// props/emits /////
+///// refs and variables /////
+
 // type EChartsOption = ComposeOption<
 //   | TitleComponentOption
 //   | TooltipComponentOption
@@ -130,16 +159,10 @@ provide(THEME_KEY, 'dark');
 //   | PieSeriesOption
 // >;
 
-// const amplitude = ref(1.0);
-// const period = ref(1.0);
-// const offset = ref(10);
-
 const startOfSunYear = dayjs().subtract(1, 'year').month(11).date(27);
-// const fixedDate = dayjs('2000-1-1 00:00:00')
-let oneDay = 24 * 3600 * 1000;
-const lat = ref(49.051944);
-const lng = ref(11.782778);
-const elevation = ref(514);
+const lat = ref(49.01525);
+const lng = ref(12.10175);
+const elevation = ref(337);
 const option = ref();
 const loading = ref(false);
 const chart = shallowRef(null);
@@ -147,25 +170,32 @@ let updateOptions = {};
 
 const tableRows = ref<{
   date: string;
-  sunrise: string;
   sunset: string;
-  sunsetStart: string;
-  lightOn: string;
-  lightOff: string,
-  altitudeOn: number,
+  lightOff: string;
   altitudeOff: number,
 }[]>([])
 
 const settings = reactive({
-  lightOnAmplitude: -0.5,
-  lightOnOffset: 0,
-  lightOffAmplitude: -0.5,
-  lightOffOffset: 1
-})
+  lightOffAmplitude: 12,
+  lightOffOffset: -22,
+});
 
+///// computed /////
+const lowerBound = computed(() => {
+  return settings.lightOffOffset - (settings.lightOffAmplitude);
+});
+
+const upperBound = computed(() => {
+  return settings.lightOffOffset + (settings.lightOffAmplitude);
+});
+
+
+///// functions /////
+const getOneDayTimeString = (date: Date): string => {
+  return dayjs('2000-1-1').hour(date.getHours()).minute(date.getMinutes()).second(date.getSeconds()).format('YYYY/MM/DD HH:mm:ss')
+}
 
 const update = debounce(async () => {
-  // console.log('Update chart');
   loading.value = true;
   if (chart.value) {
     await getDataSet();
@@ -176,113 +206,54 @@ const update = debounce(async () => {
         },
       });
   }
-  // setOptions(source);
   loading.value = false;
 }, 200)
-
-watch(settings, async () => {
-  await update();
-})
-
-
-const getOneDayTimeString = (date: Date): string => {
-  return dayjs('2000-1-1').hour(date.getHours()).minute(date.getMinutes()).second(date.getSeconds()).format('YYYY/MM/DD HH:mm:ss')
-}
 
 const getDataSet = async () => {
   let now = startOfSunYear;
   tableRows.value = [];
-  // const dataset = [] as any[];
-
-  // dataset.push(['date']);
-  // dataset.push(['sunrise']);
-  // dataset.push(['sunsetStart']);
-  // dataset.push(['sunset']);
-  // dataset.push(['lightOn']);
-  // dataset.push(['lightOff']);
 
   for (var i = 0; i < 365; i++) {
-
-    // const altitude = 1 * (settings.amplitude * Math.sin((settings.period * i) - (1.377 - Math.PI)) + settings.offset);
-
-
     // https://math.stackexchange.com/questions/650223/formula-for-sine-wave-that-lines-up-with-calendar-seasons
-    const altitudeOn = settings.lightOnAmplitude * (Math.sin(((2 * Math.PI) / 365) * (now.dayOfYear() - 81.75))) + settings.lightOnOffset;
     const altitudeOff = settings.lightOffAmplitude * (Math.sin(((2 * Math.PI) / 365) * (now.dayOfYear() - 81.75))) + settings.lightOffOffset;
 
-    SunCalc.addTime(altitudeOn, 'lightOnMorning', 'lightOnEvening');
     SunCalc.addTime(altitudeOff, 'lightOffMorning', 'lightOffEvening');
 
     var sunPos = SunCalc.getTimes(now.toDate(), lat.value, lng.value, elevation.value);
 
     // add date to header row
     const date = [now.year(), now.month() + 1, now.date()].join('/');
-    // dataset[0].push(date);
-    // dataset[1].push(getOneDayTimeString(sunPos['sunrise']));
-    // dataset[2].push(getOneDayTimeString(sunPos['sunset']));
-    // dataset[3].push(getOneDayTimeString(sunPos['lightOnEvening']));
-    // dataset[4].push(getOneDayTimeString(sunPos['lightOffEvening']));
 
     tableRows.value.push(
       {
         date,
-        sunrise: getOneDayTimeString(sunPos['sunrise']),
-        sunsetStart: getOneDayTimeString(sunPos['sunsetStart']),
         sunset: getOneDayTimeString(sunPos['sunset']),
-        lightOn: getOneDayTimeString(sunPos['lightOnEvening']),
         lightOff: getOneDayTimeString(sunPos['lightOffEvening']),
-        altitudeOn,
-        altitudeOff
+        altitudeOff,
       }
     )
 
     now = now.add(1, 'day');
   }
-
-  // console.dir(tableRows.value);
-
-  // return dataset;
 }
 
 const setOptions = async (source) => {
   return {
+    color: [
+      '#fcba03',
+      '#03fcfc',
+      '#fc0349',
+    ],
     animation: false,
     legend: {},
     tooltip: {
       trigger: 'axis',
-      // axisPointer: {
-      //   label: {
-      //     formatter: (params) => {
-      //       console.dir(params);
-      //     }
-      //   }
-      // },
-      // formatter: function (params) {
-
-      //   // let text = '';
-      //   // for (const param of params) {
-
-      //   // }
-
-      //   console.dir(params);
-      //   params = params[0];
-      //   var date = new Date(params.name);
-      //   return (
-      //     date.getDate() +
-      //     '/' +
-      //     (date.getMonth() + 1) +
-      //     '/' +
-      //     date.getFullYear() +
-      //     ' : ' +
-      //     params.value[1] 
-      //   );
-      // },
       axisPointer: {
         animation: false
       }
     },
     dataset: {
-      dimensions: ['date', 'sunrise', 'sunsetStart', 'sunset', 'lightOn', 'lightOff', 'altitudeOn', 'altitudeOff'],
+      dimensions: ['date', 'sunset', 'lightOff', 'altitudeOff'], // 'sunrise', 'sunsetStart', , 'altitudeOff'
       source
     },
     xAxis: {
@@ -294,7 +265,6 @@ const setOptions = async (source) => {
     yAxis: [
       {
         type: 'time',
-        // boundaryGap: ['00:00:00'],
         splitLine: {
           show: false
         },
@@ -302,70 +272,32 @@ const setOptions = async (source) => {
       {
         type: 'value',
         name: 'Altitude',
-        // min: 0,
-        // max: 1
       }
     ],
-    // grid: { top: '55%' },
     series: [
       {
         type: 'line',
         seriesLayoutBy: 'row',
         smooth: true,
         showSymbol: false,
+        // color: colorPalette,
         tooltip: {
           valueFormatter: value => {
-            return value['sunrise']
+            return value['sunset'].split(' ')[1];
           }
         },
         // itemStyle: {normal: {areaStyle: {type: 'default'}}},
-        lineStyle: { color: '#fcc603', type: 'dashed', width: 1 }
+        lineStyle: { type: 'dashed', width: 1 }
       },
       {
         type: 'line',
         seriesLayoutBy: 'row',
         smooth: true,
         showSymbol: false,
+        // color: colorPalette,
         tooltip: {
           valueFormatter: value => {
-            return value['sunsetStart']
-          }
-        },
-        // itemStyle: {normal: {areaStyle: {type: 'default'}}},
-        lineStyle: { color: '#fcc603', type: 'dashed', width: 1 }
-      },
-      {
-        type: 'line',
-        seriesLayoutBy: 'row',
-        smooth: true,
-        showSymbol: false,
-        tooltip: {
-          valueFormatter: value => {
-            return value['sunset']
-          }
-        },
-        // itemStyle: {normal: {areaStyle: {type: 'default'}}},
-        lineStyle: { color: '#fcc603', type: 'dashed', width: 1 }
-      },
-      {
-        type: 'line',
-        seriesLayoutBy: 'row',
-        smooth: true,
-        showSymbol: false,
-        tooltip: {
-          valueFormatter: value => {
-            return value['lightOn']
-          }
-        },
-      },
-      {
-        type: 'line',
-        seriesLayoutBy: 'row',
-        smooth: true,
-        showSymbol: false,
-        tooltip: {
-          valueFormatter: value => {
-            return value['lightOff']
+            return value['lightOff'].split(' ')[1];
           }
         },
       },
@@ -375,18 +307,27 @@ const setOptions = async (source) => {
         yAxisIndex: 1,
         smooth: true,
         showSymbol: false,
+        // color: colorPalette,
+        tooltip: {
+          valueFormatter: value => {
+            return Math.round(value * 100) / 100;
+          }
+        },
+        lineStyle: { type: 'dotted', width: .5 }
       },
-      {
-        type: 'line',
-        seriesLayoutBy: 'row',
-        yAxisIndex: 1,
-        smooth: true,
-        showSymbol: false,
-      },
-    ]
+    ],
+    // graph: {
+    //   color: colorPalette,
+    // }
   }
 };
 
+///// watchers /////
+watch(settings, async () => {
+  await update();
+})
+
+///// lifecycle /////
 onMounted(async () => {
   await getDataSet();
   option.value = await setOptions(tableRows.value);
