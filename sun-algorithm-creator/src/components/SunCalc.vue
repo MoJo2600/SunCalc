@@ -80,9 +80,9 @@
             <v-card-title>Settings</v-card-title>
 
             <div class="px-4 mb-2">
-              <v-text-field label="latitude" v-model="lat"></v-text-field>
-              <v-text-field label="longitude" v-model="lng"></v-text-field>
-              <v-text-field label="height" v-model="elevation"></v-text-field>
+              <v-text-field label="latitude" v-model="settings.lat"></v-text-field>
+              <v-text-field label="longitude" v-model="settings.lng"></v-text-field>
+              <v-text-field label="height" v-model="settings.elevation"></v-text-field>
               <v-slider label="Amplitude" :max="20" :min="-20" :step="0.1" v-model="settings.lightOffAmplitude">
                 <template v-slot:append>
                   <v-text-field v-model="settings.lightOffAmplitude" density="compact" style="width: 70px" type="number"
@@ -160,9 +160,6 @@ provide(THEME_KEY, 'dark');
 // >;
 
 const startOfSunYear = dayjs().subtract(1, 'year').month(11).date(27);
-const lat = ref(49.01525);
-const lng = ref(12.10175);
-const elevation = ref(337);
 const option = ref();
 const loading = ref(false);
 const chart = shallowRef(null);
@@ -178,6 +175,9 @@ const tableRows = ref<{
 const settings = reactive({
   lightOffAmplitude: 12,
   lightOffOffset: -22,
+  lat: 49.01525,
+  lng: 12.10175,
+  elevation: 337
 });
 
 ///// computed /////
@@ -219,7 +219,7 @@ const getDataSet = async () => {
 
     SunCalc.addTime(altitudeOff, 'lightOffMorning', 'lightOffEvening');
 
-    var sunPos = SunCalc.getTimes(now.toDate(), lat.value, lng.value, elevation.value);
+    var sunPos = SunCalc.getTimes(now.toDate(), settings.lat, settings.lng, settings.elevation);
 
     // add date to header row
     const date = [now.year(), now.month() + 1, now.date()].join('/');
